@@ -1,17 +1,10 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # Import CORS
+from flask_cors import CORS
 import pandas as pd
-import os
+import io
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
-
-# Define an upload folder path
-UPLOAD_FOLDER = 'uploads'
-
-# Ensure the upload folder exists
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+CORS(app)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -19,11 +12,13 @@ def upload_file():
         return 'No file uploaded', 400
 
     file = request.files['file']
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(file_path)
+
+    if not file.filename.endswith('.csv'):
+        return 'Invalid file type. Only CSV files are allowed.', 400
 
     try:
-        df = pd.read_csv(file_path)
+        # Read file content into a pandas DataFrame
+        df = pd.read_csv(io.StringIO(file.read().decode('utf-8')))
     except Exception as e:
         return f"Error reading CSV file: {e}", 500
 
@@ -38,6 +33,3 @@ def upload_file():
         'chartData': chart_data,
         'matchingIndices': matching_indices
     })
-
-if __name__ == '__main__':
-    app.run(debug=True)
