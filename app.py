@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pandas as pd
 import io
+import numpy as np
 
 app = Flask(__name__)
 CORS(app)
@@ -17,7 +18,6 @@ def upload_file():
         return 'Invalid file type. Only CSV files are allowed.', 400
 
     try:
-        # Read file content into a pandas DataFrame
         df = pd.read_csv(io.StringIO(file.read().decode('utf-8')))
     except Exception as e:
         return f"Error reading CSV file: {e}", 500
@@ -31,5 +31,37 @@ def upload_file():
 
     return jsonify({
         'chartData': chart_data,
-        'matchingIndices': matching_indices
+        'matchingIndices': matching_indices,
     })
+
+@app.route('/detect_anomalies', methods=['POST'])
+def detect_anomalies():
+    if 'file' not in request.files:
+        return 'No file uploaded', 400
+
+    file = request.files['file']
+
+    if not file.filename.endswith('.csv'):
+        return 'Invalid file type. Only CSV files are allowed.', 400
+
+    try:
+        df = pd.read_csv(io.StringIO(file.read().decode('utf-8')))
+    except Exception as e:
+        return f"Error reading CSV file: {e}", 500
+
+    values = df.iloc[:, 0]
+    mean = values.mean()
+    std = values.std()
+    threshold_high = mean + 2 * std
+    threshold_low = mean - 2 * std
+    anomalies = values[(values > threshold_high) | (values < threshold_low)]
+    anomaly_indices = anomalies.index.tolist()
+
+    return jsonify({
+        'anomalyIndices': anomaly_indices,
+        'anomalies': anomalies.tolist(),
+        'thresholds': {'high': threshold_high, 'low': threshold_low},
+        'allValues': values.tolist()
+    })
+
+
