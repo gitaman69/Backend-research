@@ -23,15 +23,19 @@ def upload_file():
         return f"Error reading CSV file: {e}", 500
 
     matching_indices = []
+    matching_values = []
+    
     for i in range(0, len(df) - 3):
         if df.iloc[i, 0] == df.iloc[i + 1, 0] == df.iloc[i + 2, 0] == df.iloc[i + 3, 0]:
             matching_indices.append(i)
+            matching_values.append(df.iloc[i, 0])  # Store the value of the matching rows
 
     chart_data = [{"index": i, "value": v} for i, v in enumerate(df.iloc[:, 0])]
 
     return jsonify({
         'chartData': chart_data,
         'matchingIndices': matching_indices,
+        'matchingValues': matching_values,
     })
 
 @app.route('/detect_anomalies', methods=['POST'])
@@ -55,11 +59,13 @@ def detect_anomalies():
     threshold_high = mean + 2 * std
     threshold_low = mean - 2 * std
     anomalies = values[(values > threshold_high) | (values < threshold_low)]
+    
     anomaly_indices = anomalies.index.tolist()
+    anomaly_values = anomalies.tolist()  # Store the actual anomaly values
 
     return jsonify({
         'anomalyIndices': anomaly_indices,
-        'anomalies': anomalies.tolist(),
+        'anomalies': anomaly_values,
         'thresholds': {'high': threshold_high, 'low': threshold_low},
         'allValues': values.tolist()
     })
