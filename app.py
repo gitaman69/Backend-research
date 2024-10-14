@@ -7,6 +7,8 @@ import numpy as np
 app = Flask(__name__)
 CORS(app)
 
+meter_state = "off"
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
@@ -70,4 +72,15 @@ def detect_anomalies():
         'allValues': values.tolist()
     })
 
+@app.route('/toggle_meter', methods=['POST'])
+def toggle_meter():
+    global meter_state
+    # Get the state from the request data
+    data = request.get_json()
+    if 'state' in data:
+        meter_state = data['state']
+    return jsonify({'meter_state': meter_state})
 
+@app.route('/get_meter_state', methods=['GET'])
+def get_meter_state():
+    return jsonify({'meter_state': meter_state})
